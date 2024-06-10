@@ -1,11 +1,26 @@
-import asyncio  # чтобы добавить асинхронную функцию main в цикл событий
+import asyncio
+import logging
 
 from aiogram import Bot, Dispatcher
-from config_data.config import Config, load_config  # чтобы задать настройки бота,с помощью файла .env
+from config_data.config import Config, load_config
+from handlers import other_handlers, user_handlers
+from aiogram.client.bot import DefaultBotProperties
+# from aiogram.enums import ParseMode
+
+# Инициализируем логгер
+logger = logging.getLogger(__name__)
 
 
-# Асинхронная функция конфигурирования и запуска бота
-async def main() -> None:
+# Функция конфигурирования и запуска бота
+async def main():
+    # Конфигурируем логирование
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(filename)s:%(lineno)d #%(levelname)-8s '
+               '[%(asctime)s] - %(name)s - %(message)s')
+
+    # Выводим в консоль информацию о начале запуска бота
+    logger.info('Starting bot')
 
     # Загружаем конфиг в переменную config
     # создаем объект config - экземпляр класса Config, через который
@@ -13,14 +28,17 @@ async def main() -> None:
     config: Config = load_config()
 
     # Инициализируем бот и диспетчер
-    bot = Bot(token=config.tg_bot.token)
+    bot = Bot(token=config.tg_bot.token,
+              default=DefaultBotProperties(parse_mode='HTML'))
     dp = Dispatcher()
+
+    # Регистриуем роутеры в диспетчере
+    dp.include_router(user_handlers.router)
+    dp.include_router(other_handlers.router)
 
     # Пропускаем накопившиеся апдейты и запускаем polling
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
-# функция main асинхронная, поэтому мы не можем ее просто вызвать,
-# как это делали с синхронными функциями -нужно запустить цикл событий и
-# добавить функцию в него
+
 asyncio.run(main())
